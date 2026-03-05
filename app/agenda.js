@@ -173,20 +173,53 @@ const Todo = ({ t, dispatch, showProject }) => {
 
 // ─── Day Section ───────────────────────────────────────────────
 
-const Day = ({ label, todos, dispatch, isToday, isPast }) => {
+const Day = ({ label, date, todos, dispatch, isToday, isPast, habitLog }) => {
   const pending = todos.filter(t => !t.done);
   const done = todos.filter(t => t.done);
+  const dayOfWeek = new Date(date + "T12:00:00").getDay(); // 0=Sun
+
+  // Hebrew: Sun-Thu (0-4), Sport: Sun/Tue/Thu (0,2,4)
+  const showHebrew = dayOfWeek >= 0 && dayOfWeek <= 4;
+  const showSport = dayOfWeek === 0 || dayOfWeek === 2 || dayOfWeek === 4;
+  const hebrewKey = `hebrew_${date}`;
+  const sportKey = `sport_${date}`;
+  const hebrewDone = habitLog?.[hebrewKey];
+  const sportDone = habitLog?.[sportKey];
 
   if (isPast && todos.length === 0) return null;
 
   return (
     <div style={{ marginBottom: 36 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         {isToday && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#0EA5E9", boxShadow: "0 0 10px #0EA5E944" }} />}
         <span style={{ fontSize: isToday ? 17 : 13, fontWeight: isToday ? 700 : 600, color: isPast ? "#CBD5E1" : "#0F172A", letterSpacing: "-0.02em" }}>{label}</span>
         <div style={{ flex: 1, height: 1, background: isToday ? "#BAE6FD" : "#F1F5F9" }} />
         {pending.length > 0 && <span style={{ fontSize: 10, fontWeight: 600, color: isToday ? "#0EA5E9" : "#94A3B8" }}>{pending.length}</span>}
       </div>
+
+      {/* Habit checkboxes */}
+      {(showHebrew || showSport) && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, paddingLeft: isToday ? 18 : 0 }}>
+          {showHebrew && (
+            <div onClick={() => dispatch({ type: "HABIT", habit: "hebrew", date })}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, cursor: "pointer", background: hebrewDone ? "#D4A03C12" : "#F8FAFB", border: `1px solid ${hebrewDone ? "#D4A03C" : "#E2E8F0"}`, transition: "all 0.15s" }}>
+              <div style={{ width: 14, height: 14, borderRadius: 4, border: hebrewDone ? "none" : "1.5px solid #D4A03C55", background: hebrewDone ? "#D4A03C" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+                {hebrewDone && <span style={{ color: "#fff", fontSize: 8, fontWeight: 700 }}>✓</span>}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 500, color: hebrewDone ? "#D4A03C" : "#94A3B8" }}>🇮🇱 Hébreu</span>
+            </div>
+          )}
+          {showSport && (
+            <div onClick={() => dispatch({ type: "HABIT", habit: "sport", date })}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, cursor: "pointer", background: sportDone ? "#EF444412" : "#F8FAFB", border: `1px solid ${sportDone ? "#EF4444" : "#E2E8F0"}`, transition: "all 0.15s" }}>
+              <div style={{ width: 14, height: 14, borderRadius: 4, border: sportDone ? "none" : "1.5px solid #EF444455", background: sportDone ? "#EF4444" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}>
+                {sportDone && <span style={{ color: "#fff", fontSize: 8, fontWeight: 700 }}>✓</span>}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 500, color: sportDone ? "#EF4444" : "#94A3B8" }}>💪 Sport</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {pending.map(t => <Todo key={t.id} t={t} dispatch={dispatch} showProject={true} />)}
 
@@ -409,26 +442,23 @@ export default function Agenda() {
           )}
         </div>
 
-        {/* Habits */}
-        <HabitsMonth habitLog={state.habitLog} dispatch={dispatch} />
-
         {/* Quick Add */}
         <Add dispatch={dispatch} />
 
         {/* Hier (done only) */}
         {yesterdayTodos.length > 0 && (
-          <Day label={fmtDate(ds(-1))} todos={yesterdayTodos} dispatch={dispatch} isToday={false} isPast={true} />
+          <Day label={fmtDate(ds(-1))} date={ds(-1)} todos={yesterdayTodos} dispatch={dispatch} isToday={false} isPast={true} habitLog={state.habitLog} />
         )}
 
         {/* Aujourd'hui */}
-        <Day label={fmtDate(ds())} todos={todayTodos} dispatch={dispatch} isToday={true} isPast={false} />
+        <Day label={fmtDate(ds())} date={ds()} todos={todayTodos} dispatch={dispatch} isToday={true} isPast={false} habitLog={state.habitLog} />
 
         {/* Future days — show any day that has tasks, up to 14 days */}
         {Array.from({ length: 14 }, (_, i) => i + 1).map(offset => {
           const d = ds(offset);
           const todos = state.todos.filter(t => t.date === d);
           if (todos.length === 0) return null;
-          return <Day key={d} label={fmtDate(d)} todos={todos} dispatch={dispatch} isToday={false} isPast={false} />;
+          return <Day key={d} label={fmtDate(d)} date={d} todos={todos} dispatch={dispatch} isToday={false} isPast={false} habitLog={state.habitLog} />;
         })}
 
         {/* Footer */}
